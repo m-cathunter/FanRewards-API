@@ -2,6 +2,8 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { config } from './config';
+import dbPlugin, { dataSource } from './plugins/db';
+import errorHandler from './plugins/errorHandler';
 
 const buildApp = async () => {
   const app = Fastify({
@@ -10,22 +12,41 @@ const buildApp = async () => {
     },
   });
 
-  // Register plugins
+  // Security + cross-origin plugins.
   await app.register(cors, { origin: true });
   await app.register(helmet);
 
-  // TODO: Register database plugin (see plugins/db.ts)
-  // TODO: Register auth middleware (see middleware/auth.ts)
-  // TODO: Register route plugins (see routes/)
+  // Cross-cutting concerns.
+  await app.register(errorHandler);
+  await app.register(dbPlugin);
 
-  // Health check
-  app.get('/health', async () => ({ status: 'ok' }));
+  // TODO: Register route plugins (see routes/) as they are implemented.
+
+  // Health check with database connectivity status.
+  app.get('/health', async (_request, reply) => {
+    try {
+      await dataSource.query('SELECT 1');
+      return { status: 'ok', db: 'up' };
+    } catch {
+      reply.code(503);
+      return { status: 'degraded', db: 'down' };
+    }
+  });
 
   return app;
 };
 
 const start = async () => {
   const app = await buildApp();
+
+  // Graceful shutdown: close the server (which tears down the DB pool) on signal.
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.on(signal, async () => {
+      app.log.info(`Received ${signal}, shutting down`);
+      await app.close();
+      process.exit(0);
+    });
+  }
 
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });
@@ -36,6 +57,9 @@ const start = async () => {
   }
 };
 
-start();
+// Only start the server when run directly, so tests can import buildApp.
+if (require.main === module) {
+  start();
+}
 
 export { buildApp };
