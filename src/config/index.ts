@@ -14,6 +14,12 @@ export const config = {
     timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute',
   },
 
+  // Comma-separated allowlist of browser origins. Unset => reflect any origin
+  // (convenient for local dev / API tools); set it in production to lock down.
+  corsOrigins: process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+    : null,
+
   db: {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432', 10),

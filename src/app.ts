@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { randomUUID } from 'crypto';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -18,10 +19,19 @@ const buildApp = async () => {
     logger: {
       level: config.logLevel,
     },
+    // Correlation IDs: honor an incoming x-request-id, otherwise mint one. The
+    // id is attached to every log line for this request (logged as reqId).
+    requestIdHeader: 'x-request-id',
+    genReqId: (req) => (req.headers['x-request-id'] as string) || randomUUID(),
   });
 
-  // Security + cross-origin plugins.
-  await app.register(cors, { origin: true });
+  // Echo the correlation id back so clients can report it in bug reports.
+  app.addHook('onRequest', async (request, reply) => {
+    reply.header('x-request-id', request.id);
+  });
+
+  // Security + cross-origin plugins. CORS origin is an allowlist when configured.
+  await app.register(cors, { origin: config.corsOrigins ?? true });
   await app.register(helmet);
   await app.register(rateLimit, {
     max: config.rateLimit.max,
