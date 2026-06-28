@@ -9,6 +9,7 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import challengeRoutes from './routes/challenges';
 import rewardRoutes from './routes/rewards';
+import leaderboardRoutes from './routes/leaderboard';
 
 const buildApp = async () => {
   const app = Fastify({
@@ -31,6 +32,7 @@ const buildApp = async () => {
   await app.register(userRoutes, { prefix: '/api/users' });
   await app.register(challengeRoutes, { prefix: '/api/challenges' });
   await app.register(rewardRoutes, { prefix: '/api/rewards' });
+  await app.register(leaderboardRoutes, { prefix: '/api/leaderboard' });
 
   // Health check with database connectivity status.
   app.get('/health', async (_request, reply) => {
