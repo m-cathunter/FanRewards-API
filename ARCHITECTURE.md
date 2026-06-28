@@ -125,12 +125,49 @@ covers the end-to-end auth flow including rotation and theft detection, the
 completion point math, concurrent redemption, and leaderboard ties — the parts
 where bugs would be most costly.
 
+## Leaderboard performance (EXPLAIN analysis)
+
+The leaderboard is the hottest read and the most likely to degrade at scale, so
+its plan is worth checking rather than guessing. Measured on a local Postgres 16
+seeded with **500,000 users**, querying the first page (`LIMIT 20`).
+
+**Before** — no index on `totalPoints`:
+
+```
+Limit  (actual time=39.341..41.363 rows=20)
+  -> Incremental Sort (Sort Key: "totalPoints" DESC, id)
+    -> WindowAgg
+      -> Gather Merge
+        -> Sort  (Sort Method: external merge  Disk: ~7000kB)   <- spills to disk
+          -> Parallel Seq Scan on users                          <- reads all 500k rows
+Execution Time: 41.686 ms
+```
+
+Every request scans the whole table and sorts it on disk.
+
+**After** — `CREATE INDEX ON users (totalPoints)` (migration `LeaderboardIndex`):
+
+```
+Limit  (actual time=0.163..0.165 rows=20)
+  -> Incremental Sort
+    -> WindowAgg
+      -> Index Scan Backward using IDX_..._totalPoints on users  <- reads ~26 rows
+Execution Time: 0.200 ms
+```
+
+The index provides rows already ordered by `totalPoints`, so the planner does a
+backward index scan, the `RANK()` window is computed incrementally, and the
+`LIMIT` lets it stop after the first page instead of sorting all 500k rows. That
+is **~41.7 ms → ~0.2 ms, roughly a 200× improvement**, and it scales with page
+size rather than table size.
+
 ## Scaling notes
 
-- **Leaderboard at 1M users**: add an index on `users.totalPoints`. For heavy
-  read traffic, cache the top-N page (it changes slowly) and/or maintain a
-  materialized ranking refreshed on a schedule, trading freshness for cheap
-  reads. Cursor-based pagination would replace `OFFSET` for deep pages.
+- **Leaderboard beyond this**: the index above handles the top pages cheaply.
+  For very heavy read traffic, cache the top-N page (it changes slowly) and/or
+  maintain a materialized ranking refreshed on a schedule, trading freshness for
+  cheap reads. Cursor-based pagination would replace `OFFSET` for deep pages,
+  which still pay for the rows they skip.
 - **Refresh tokens**: a periodic job should prune expired/revoked rows.
 - **Service extraction**: auth is the natural first microservice to split out —
   it is cohesive, has a clear interface (token issuance/verification), and is a
