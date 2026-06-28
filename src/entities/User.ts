@@ -27,6 +27,8 @@ export class User {
   @Column({ type: 'varchar', length: 100, nullable: true })
   displayName!: string | null;
 
+  // Indexed for the leaderboard, which orders by totalPoints descending.
+  @Index()
   @Column({ type: 'int', default: 0 })
   totalPoints!: number;
 
