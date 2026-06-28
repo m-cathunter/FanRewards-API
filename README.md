@@ -110,6 +110,15 @@ src/
 ├── seed.ts        # Idempotent data seeding
 └── app.ts         # Fastify app assembly
 test/              # Jest + Supertest integration tests
+db/
+└── schema.sql     # Readable schema snapshot (pg_dump); migrations are the source of truth
+```
+
+To refresh the schema snapshot after a schema change:
+
+```bash
+docker exec <postgres-container> pg_dump -U belong -d fan_rewards \
+  --schema-only --no-owner --no-privileges > db/schema.sql
 ```
 
 ## Further reading
