@@ -84,20 +84,27 @@ export class AuthService {
       throw AppError.unauthorized('Invalid refresh token', 'INVALID_TOKEN');
     }
 
-    if (stored.revokedAt) {
+    if (stored.expiresAt.getTime() < Date.now()) {
+      throw AppError.unauthorized('Refresh token has expired', 'INVALID_TOKEN');
+    }
+
+    // Atomically claim the token: the conditional UPDATE only succeeds if it is
+    // still un-revoked, so among concurrent requests presenting the same token
+    // exactly one wins. A miss (affected === 0) means the token was already
+    // rotated or revoked — i.e. reuse/theft — so we revoke the whole active
+    // family. This makes rotation genuinely single-use even under concurrency.
+    const claim = await this.refreshTokens.update(
+      { id: stored.id, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
+
+    if (claim.affected === 0) {
       await this.refreshTokens.update(
         { userId: payload.sub, revokedAt: IsNull() },
         { revokedAt: new Date() },
       );
       throw AppError.unauthorized('Refresh token has already been used', 'INVALID_TOKEN');
     }
-
-    if (stored.expiresAt.getTime() < Date.now()) {
-      throw AppError.unauthorized('Refresh token has expired', 'INVALID_TOKEN');
-    }
-
-    stored.revokedAt = new Date();
-    await this.refreshTokens.save(stored);
 
     return this.issueTokens(stored.userId);
   }

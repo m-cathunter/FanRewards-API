@@ -68,6 +68,19 @@ describe('auth flow', () => {
     expect(afterTheft.status).toBe(401);
   });
 
+  it('lets only one of two concurrent refreshes with the same token succeed', async () => {
+    const reg = await api(app).post('/api/auth/register').send(creds);
+    const rt = reg.body.data.tokens.refreshToken;
+
+    const [a, b] = await Promise.all([
+      api(app).post('/api/auth/refresh').send({ refreshToken: rt }),
+      api(app).post('/api/auth/refresh').send({ refreshToken: rt }),
+    ]);
+
+    // Rotation is single-use: exactly one wins, the other is rejected.
+    expect([a.status, b.status].sort()).toEqual([200, 401]);
+  });
+
   it('invalidates a refresh token on logout', async () => {
     const reg = await api(app).post('/api/auth/register').send(creds);
     const rt = reg.body.data.tokens.refreshToken;
