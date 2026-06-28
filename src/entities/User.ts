@@ -1,3 +1,47 @@
-// Implement the User entity
-// Fields: id (uuid), email (unique), password hash, total points, display name, timestamps
-// Relations: a user has many challenge completions and reward redemptions
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { ChallengeCompletion } from './ChallengeCompletion';
+import { RewardRedemption } from './RewardRedemption';
+import { RefreshToken } from './RefreshToken';
+
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Index({ unique: true })
+  @Column({ type: 'varchar', length: 255 })
+  email!: string;
+
+  // Never selected by default so password hashes don't leak into query results.
+  @Column({ type: 'varchar', length: 255, select: false })
+  passwordHash!: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  displayName!: string | null;
+
+  @Column({ type: 'int', default: 0 })
+  totalPoints!: number;
+
+  @OneToMany(() => ChallengeCompletion, (completion) => completion.user)
+  completions!: ChallengeCompletion[];
+
+  @OneToMany(() => RewardRedemption, (redemption) => redemption.user)
+  redemptions!: RewardRedemption[];
+
+  @OneToMany(() => RefreshToken, (token) => token.user)
+  refreshTokens!: RefreshToken[];
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt!: Date;
+}
