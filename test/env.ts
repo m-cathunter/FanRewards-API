@@ -10,3 +10,5 @@ process.env.DB_PORT = process.env.DB_PORT || '5433';
 process.env.DB_DATABASE = 'fan_rewards_test';
 process.env.JWT_ACCESS_SECRET = 'test-access-secret';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+// Fixed allowlist so the CORS behavior is deterministic in tests.
+process.env.CORS_ORIGINS = 'https://allowed.example.com';
