@@ -6,6 +6,7 @@ import dbPlugin, { dataSource } from './plugins/db';
 import errorHandler from './plugins/errorHandler';
 import authPlugin from './middleware/auth';
 import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
 
 const buildApp = async () => {
   const app = Fastify({
@@ -25,6 +26,7 @@ const buildApp = async () => {
 
   // Route plugins.
   await app.register(authRoutes, { prefix: '/api/auth' });
+  await app.register(userRoutes, { prefix: '/api/users' });
 
   // Health check with database connectivity status.
   app.get('/health', async (_request, reply) => {

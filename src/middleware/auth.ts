@@ -32,6 +32,14 @@ export async function authGuard(request: FastifyRequest, _reply: FastifyReply): 
   }
 }
 
+/** Read the authenticated user id, asserting the guard has run. */
+export function getUserId(request: FastifyRequest): string {
+  if (!request.user) {
+    throw AppError.unauthorized();
+  }
+  return request.user.userId;
+}
+
 /** Decorate the instance with `authenticate` so routes can use it as a hook. */
 async function authPlugin(fastify: FastifyInstance) {
   fastify.decorate('authenticate', authGuard);
