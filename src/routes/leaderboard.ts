@@ -12,6 +12,9 @@ const ListQuery = Type.Object(
   { additionalProperties: false },
 );
 
+const tags = ['leaderboard'];
+const security = [{ bearerAuth: [] }];
+
 export default async function leaderboardRoutes(fastify: FastifyInstance) {
   const leaderboard = new LeaderboardService(fastify.dataSource);
 
@@ -19,7 +22,7 @@ export default async function leaderboardRoutes(fastify: FastifyInstance) {
 
   fastify.get<{ Querystring: Static<typeof ListQuery> }>(
     '/',
-    { schema: { querystring: ListQuery } },
+    { schema: { tags, security, summary: 'Top fans by points', querystring: ListQuery } },
     async (request) => {
       const { page, limit } = request.query;
       const { rows, total } = await leaderboard.getTopFans({ page, limit });
@@ -27,7 +30,11 @@ export default async function leaderboardRoutes(fastify: FastifyInstance) {
     },
   );
 
-  fastify.get('/me', async (request) => {
-    return success(await leaderboard.getUserRank(getUserId(request)));
-  });
+  fastify.get(
+    '/me',
+    { schema: { tags, security, summary: "The current user's rank" } },
+    async (request) => {
+      return success(await leaderboard.getUserRank(getUserId(request)));
+    },
+  );
 }

@@ -2,9 +2,17 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const isTest = process.env.NODE_ENV === 'test';
+
 export const config = {
   port: parseInt(process.env.PORT || '3000', 10),
   logLevel: process.env.LOG_LEVEL || 'info',
+
+  // Generous default; effectively disabled under test so it never flakes.
+  rateLimit: {
+    max: isTest ? 1_000_000 : parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+    timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute',
+  },
 
   db: {
     host: process.env.DB_HOST || 'localhost',

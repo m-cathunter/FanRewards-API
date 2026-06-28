@@ -14,18 +14,25 @@ const HistoryQuery = Type.Object(
   { additionalProperties: false },
 );
 
+const tags = ['rewards'];
+const security = [{ bearerAuth: [] }];
+
 export default async function rewardRoutes(fastify: FastifyInstance) {
   const rewards = new RewardService(fastify.dataSource);
 
   fastify.addHook('onRequest', fastify.authenticate);
 
-  fastify.get('/', async () => {
-    return success(await rewards.list());
-  });
+  fastify.get(
+    '/',
+    { schema: { tags, security, summary: 'List available rewards' } },
+    async () => {
+      return success(await rewards.list());
+    },
+  );
 
   fastify.get<{ Querystring: Static<typeof HistoryQuery> }>(
     '/history',
-    { schema: { querystring: HistoryQuery } },
+    { schema: { tags, security, summary: 'Redemption history', querystring: HistoryQuery } },
     async (request) => {
       const { page, limit } = request.query;
       const { rows, total } = await rewards.getHistory(getUserId(request), { page, limit });
@@ -35,7 +42,7 @@ export default async function rewardRoutes(fastify: FastifyInstance) {
 
   fastify.post<{ Params: Static<typeof IdParams> }>(
     '/:id/redeem',
-    { schema: { params: IdParams } },
+    { schema: { tags, security, summary: 'Redeem a reward', params: IdParams } },
     async (request, reply) => {
       const result = await rewards.redeem(getUserId(request), request.params.id);
       reply.code(201);

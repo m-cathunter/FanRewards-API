@@ -23,6 +23,9 @@ const CompleteBody = Type.Object(
   { additionalProperties: false },
 );
 
+const tags = ['challenges'];
+const security = [{ bearerAuth: [] }];
+
 export default async function challengeRoutes(fastify: FastifyInstance) {
   const challenges = new ChallengeService(fastify.dataSource);
 
@@ -30,7 +33,7 @@ export default async function challengeRoutes(fastify: FastifyInstance) {
 
   fastify.get<{ Querystring: Static<typeof ListQuery> }>(
     '/',
-    { schema: { querystring: ListQuery } },
+    { schema: { tags, security, summary: 'List challenges', querystring: ListQuery } },
     async (request) => {
       const { page, limit, difficulty, active } = request.query;
       const { rows, total } = await challenges.list({ page, limit, difficulty, active });
@@ -40,7 +43,7 @@ export default async function challengeRoutes(fastify: FastifyInstance) {
 
   fastify.get<{ Params: Static<typeof IdParams> }>(
     '/:id',
-    { schema: { params: IdParams } },
+    { schema: { tags, security, summary: 'Get a challenge', params: IdParams } },
     async (request) => {
       return success(await challenges.getById(request.params.id));
     },
@@ -48,7 +51,7 @@ export default async function challengeRoutes(fastify: FastifyInstance) {
 
   fastify.post<{ Params: Static<typeof IdParams>; Body: Static<typeof CompleteBody> }>(
     '/:id/complete',
-    { schema: { params: IdParams, body: CompleteBody } },
+    { schema: { tags, security, summary: 'Complete a challenge', params: IdParams, body: CompleteBody } },
     async (request, reply) => {
       const result = await challenges.complete(
         getUserId(request),

@@ -1,9 +1,11 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { config } from './config';
 import dbPlugin, { dataSource } from './plugins/db';
 import errorHandler from './plugins/errorHandler';
+import swaggerPlugin from './plugins/swagger';
 import authPlugin from './middleware/auth';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
@@ -21,9 +23,20 @@ const buildApp = async () => {
   // Security + cross-origin plugins.
   await app.register(cors, { origin: true });
   await app.register(helmet);
+  await app.register(rateLimit, {
+    max: config.rateLimit.max,
+    timeWindow: config.rateLimit.timeWindow,
+    errorResponseBuilder: (_request, context) => ({
+      error: {
+        code: 'RATE_LIMITED',
+        message: `Rate limit exceeded, retry in ${context.after}`,
+      },
+    }),
+  });
 
-  // Cross-cutting concerns.
+  // Cross-cutting concerns. Swagger registers before routes so it sees their schemas.
   await app.register(errorHandler);
+  await app.register(swaggerPlugin);
   await app.register(dbPlugin);
   await app.register(authPlugin);
 

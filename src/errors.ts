@@ -16,6 +16,7 @@ export type ErrorCode =
   | 'INSUFFICIENT_POINTS'
   | 'REWARD_UNAVAILABLE'
   | 'CHALLENGE_INACTIVE'
+  | 'RATE_LIMITED'
   | 'INTERNAL_ERROR';
 
 export class AppError extends Error {

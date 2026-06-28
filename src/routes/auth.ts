@@ -25,12 +25,14 @@ const RefreshBody = Type.Object(
   { additionalProperties: false },
 );
 
+const tags = ['auth'];
+
 export default async function authRoutes(fastify: FastifyInstance) {
   const auth = new AuthService(fastify.dataSource);
 
   fastify.post<{ Body: Static<typeof RegisterBody> }>(
     '/register',
-    { schema: { body: RegisterBody } },
+    { schema: { tags, summary: 'Create an account', body: RegisterBody } },
     async (request, reply) => {
       const { email, password, displayName } = request.body;
       const result = await auth.register(email, password, displayName);
@@ -41,7 +43,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
   fastify.post<{ Body: Static<typeof LoginBody> }>(
     '/login',
-    { schema: { body: LoginBody } },
+    { schema: { tags, summary: 'Log in and receive tokens', body: LoginBody } },
     async (request) => {
       const { email, password } = request.body;
       return success(await auth.login(email, password));
@@ -50,7 +52,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
   fastify.post<{ Body: Static<typeof RefreshBody> }>(
     '/refresh',
-    { schema: { body: RefreshBody } },
+    { schema: { tags, summary: 'Rotate the refresh token', body: RefreshBody } },
     async (request) => {
       return success(await auth.refresh(request.body.refreshToken));
     },
@@ -58,7 +60,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
   fastify.post<{ Body: Static<typeof RefreshBody> }>(
     '/logout',
-    { schema: { body: RefreshBody } },
+    { schema: { tags, summary: 'Revoke a refresh token', body: RefreshBody } },
     async (request) => {
       await auth.logout(request.body.refreshToken);
       return success({ loggedOut: true });
